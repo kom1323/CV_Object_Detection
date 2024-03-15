@@ -2,7 +2,7 @@
 chip-detection-and-counting-v2 - v1 Chip-Detection-v1
 ==============================
 
-This dataset was exported via roboflow.com on March 14, 2024 at 5:56 PM GMT
+This dataset was exported via roboflow.com on March 15, 2024 at 7:30 AM GMT
 
 Roboflow is an end-to-end computer vision platform that helps you
 * collaborate with your team on computer vision projects
@@ -18,7 +18,7 @@ visit https://github.com/roboflow/notebooks
 To find over 100k other datasets and pre-trained models, visit https://universe.roboflow.com
 
 The dataset includes 310 images.
-Chip-poker are annotated in Multi-Class Classification format.
+Chip-poker are annotated in Tensorflow Object Detection format.
 
 The following pre-processing was applied to each image:
 
