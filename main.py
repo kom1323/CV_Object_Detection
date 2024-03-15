@@ -9,6 +9,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import dataset
 import miscs
+import anchor_box
 # from torch.utils.tensorboard import SummaryWriter
 
 # # default `log_dir` is "runs" - we'll be more specific here
@@ -53,10 +54,32 @@ print(device)
 
 
 # Display a sample of 5 images from the combined_dataset
-miscs.show_images(trainset, num_samples=5)
+#miscs.show_images(trainset, num_samples=5)
+
+img,_ = trainset[0]
+h, w = img.shape[1:3]
+
+print(h, w)
+X = torch.rand(size=(1, 3, h, w))  # Construct input data
+Y = anchor_box.multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
+print(Y.shape)
 
 
+boxes = Y.reshape(h, w, 5, 4)
+print(boxes[150, 150, 0, :])
 
+
+fig, ax = plt.subplots()
+# Assuming w, h are the width and height of the image respectively
+bbox_scale = torch.tensor((w, h, w, h))
+anchor_box.show_bboxes(ax, boxes[150, 150, :, :] * bbox_scale,
+            ['s=0.75, r=1', 's=0.5, r=1', 's=0.25, r=1', 's=0.75, r=2',
+             's=0.75, r=0.5'])
+
+# Display the image
+img_rgb = np.transpose(img, (1, 2, 0))
+ax.imshow(img_rgb)
+plt.show()
 
 
 if __name__ == "__main__":
