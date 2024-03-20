@@ -23,7 +23,7 @@ transforms_train = transforms.Compose([
     #transforms.RandomResizedCrop(224),
     #transforms.RandomHorizontalFlip(),                     # data augmentation
     transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) # normalization
+   # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) # normalization
 ])
 transforms_test = transforms.Compose([
     transforms.Resize((224, 224)),   #must same as here
@@ -56,30 +56,33 @@ print(device)
 # Display a sample of 5 images from the combined_dataset
 #miscs.show_images(trainset, num_samples=5)
 
-img,_ = trainset[0]
+img,labels,boxes = trainset[1]
 h, w = img.shape[1:3]
 
-print(h, w)
-X = torch.rand(size=(1, 3, h, w))  # Construct input data
-Y = anchor_box.multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
-print(Y.shape)
+print(f"{img=}")
+print(f"{labels=}")
+print(f"{boxes=}")
 
 
-boxes = Y.reshape(h, w, 5, 4)
-print(boxes[150, 150, 0, :])
+# print(h, w)
+# X = torch.rand(size=(1, 3, h, w))  # Construct input data
+# Y = anchor_box.multibox_prior(X, sizes=[0.75, 0.5, 0.25], ratios=[1, 2, 0.5])
+# print(Y.shape)
 
 
-fig, ax = plt.subplots()
-# Assuming w, h are the width and height of the image respectively
-bbox_scale = torch.tensor((w, h, w, h))
-anchor_box.show_bboxes(ax, boxes[150, 150, :, :] * bbox_scale,
-            ['s=0.75, r=1', 's=0.5, r=1', 's=0.25, r=1', 's=0.75, r=2',
-             's=0.75, r=0.5'])
+# boxes = Y.reshape(h, w, 5, 4)
+# print(boxes[150, 150, 0, :])
 
-# Display the image
-img_rgb = np.transpose(img, (1, 2, 0))
-ax.imshow(img_rgb)
-plt.show()
+
+# fig, ax = plt.subplots()
+# # Assuming w, h are the width and height of the image respectively
+# bbox_scale = torch.tensor((w, h, w, h))
+# anchor_box.show_bboxes(ax, boxes[150, 150, :, :] * bbox_scale,
+#             ['s=0.75, r=1', 's=0.5, r=1', 's=0.25, r=1', 's=0.75, r=2',
+#              's=0.75, r=0.5'])
+
+
+miscs.show_image_with_boxes(img,labels,boxes)
 
 
 if __name__ == "__main__":

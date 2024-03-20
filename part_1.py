@@ -1,16 +1,11 @@
 import torch
-import torchvision
 import torchvision.transforms as transforms
-import torch.nn.functional as F
-from torchvision.datasets import CIFAR10
-from torch.utils.data import DataLoader
 from torchvision.models import resnet18
-import matplotlib.pyplot as plt
-import numpy as np
+from torch.utils.tensorboard import SummaryWriter  # Import TensorBoard's SummaryWriter
 from PIL import Image
 
-
-print(f" is cuda available: {torch.cuda.is_available()}")
+# Check if CUDA is available
+print(f"Is CUDA available: {torch.cuda.is_available()}")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
@@ -26,6 +21,8 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
+# Initialize TensorBoard SummaryWriter
+writer = SummaryWriter()
 
 # Function to load and preprocess the image
 def load_and_preprocess_image(image_path):
@@ -50,4 +47,8 @@ def predict_image(image_tensor):
 prediction = predict_image(image_tensor)
 print(prediction)
 
-# Interpret the prediction
+# Log the prediction to TensorBoard
+writer.add_scalar("Predictions", prediction)  # Log prediction to TensorBoard
+
+# Close the SummaryWriter
+writer.close()
