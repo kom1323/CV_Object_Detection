@@ -19,7 +19,7 @@ import anchor_box
 # transforms
 # Create transform function
 transforms_train = transforms.Compose([
-    transforms.Resize((224, 224)),
+    #transforms.Resize((224, 224)),
     #transforms.RandomResizedCrop(224),
     #transforms.RandomHorizontalFlip(),                     # data augmentation
     transforms.ToTensor(),
@@ -56,8 +56,8 @@ print(device)
 # Display a sample of 5 images from the combined_dataset
 #miscs.show_images(trainset, num_samples=5)
 
-img,labels,boxes = trainset[1]
-h, w = img.shape[1:3]
+img,labels,boxes = trainset[0]
+#h, w = img.shape[1:3]
 
 print(f"{img=}")
 print(f"{labels=}")

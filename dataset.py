@@ -67,8 +67,8 @@ class CombinedDataset(Dataset):
         if self.transform:
              # Apply transformations to the image
             image = self.transform(image)
-            # Apply transformations to the bounding boxes
-            boxes = self.transform_boxes(boxes, image)
+           
+         
 
         return image, labels, boxes
     
