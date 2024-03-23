@@ -5,6 +5,7 @@ import torch
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 import csv
+from torch.nn.utils.rnn import pad_sequence
 
 
 class CombinedDataset(Dataset):
@@ -14,12 +15,12 @@ class CombinedDataset(Dataset):
             root_dirs (list): List of directories containing images.
             transform (callable, optional): Optional transform to be applied on a sample.
         """
+
         self.img_data_all = []
         self.gt_classes_all = []
         self.gt_boxes_all = []
         self.transform = transform
 
-        
         for label, root_dir in enumerate(root_dirs):
                 for foldername in ['train', 'test', 'valid']:
                     folder_path = os.path.join(root_dir, foldername)
@@ -35,9 +36,7 @@ class CombinedDataset(Dataset):
                             for row in reader:
                                 filename = os.path.join(folder_path, row['filename'])
                                 if filename not in filename_data:
-                                     filename_data[filename] = {'classes': [], 'boxes': []}
-                                print("heloo2")
-                                
+                                     filename_data[filename] = {'classes': [], 'boxes': []}                                
                                 xmin = int(row['xmin'])
                                 ymin = int(row['ymin'])
                                 xmax = int(row['xmax'])
@@ -50,9 +49,9 @@ class CombinedDataset(Dataset):
                                 self.gt_classes_all.append(data['classes'])
                                 self.gt_boxes_all.append(data['boxes'])
 
-        print(len(self.gt_boxes_all))
-        print(len(self.gt_classes_all))
-        print(len(self.img_data_all))
+        # pad bounding boxes and classes so they are of the same size
+        self.gt_boxes_all = pad_sequence([torch.tensor(bboxes) for bboxes in self.gt_boxes_all], batch_first=True, padding_value=-1)
+        self.gt_classes_all = pad_sequence([torch.tensor(classes) for classes in self.gt_classes_all], batch_first=True, padding_value=-1)
 
 
     def __len__(self):
@@ -68,9 +67,5 @@ class CombinedDataset(Dataset):
              # Apply transformations to the image
             image = self.transform(image)
            
-         
-
         return image, labels, boxes
     
-
- 
