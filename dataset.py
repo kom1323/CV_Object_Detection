@@ -6,6 +6,18 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 import csv
 from torch.nn.utils.rnn import pad_sequence
+import skimage
+import skimage.segmentation
+import numpy as np
+import torch
+import torchvision
+import torch.nn as nn
+import torchvision.models as models
+import torchvision.transforms as transforms
+from torchvision.models.detection import fasterrcnn_resnet50_fpn
+import selectivesearch
+
+
 
 
 class CombinedDataset(Dataset):
@@ -54,18 +66,52 @@ class CombinedDataset(Dataset):
         self.gt_classes_all = pad_sequence([torch.tensor(classes) for classes in self.gt_classes_all], batch_first=True, padding_value=-1)
 
 
+
+
     def __len__(self):
         return len(self.img_data_all)
+
+
+
+        # Define a function to perform selective search on an image
+    def selective_search(self, image):
+        # Convert image to skimage format
+        image_np = image.permute(1, 2, 0).cpu().numpy() 
+        # Perform selective search
+        _, regions = selectivesearch.selective_search(image_np, scale=300, sigma=0.8, min_size=700)
+
+        
+        # Convert regions to RoI format
+        rois = []
+        for r in regions: 
+            
+            x, y, w, h = r['rect']
+            rois.append([x, y, w, h])  # [x1, y1, x2, y2]
+        
+        return rois
+    
+
 
     def __getitem__(self, idx):
         image_path = self.img_data_all[idx]
         image = Image.open(image_path)
         labels = torch.tensor(self.gt_classes_all[idx])
         boxes = torch.tensor(self.gt_boxes_all[idx])
-
+        scale_factor_width = 224 / image.width
+        scale_factor_height = 224 / image.height
+        
         if self.transform:
              # Apply transformations to the image
             image = self.transform(image)
-           
-        return image, labels, boxes
+        
+        for box in boxes:
+            box[0] = int(box[0] * scale_factor_width)  # Adjust x1
+            box[1] = int(box[1] * scale_factor_height)  # Adjust y1
+            box[2] = int(box[2] * scale_factor_width)  # Adjust x2
+            box[3] = int(box[3] * scale_factor_height)  # Adjust y2
+          
+        rois = torch.tensor(self.selective_search(image))
+
+        return (image, rois), (labels, boxes) 
     
+
