@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import dataset
 import miscs
 import model as m
+from Multi_task_loss import MultiTaskLoss
 
 import warnings
 
@@ -36,7 +37,7 @@ def main():
 
     # dataloaders|
     dataloader = torch.utils.data.DataLoader(trainset, batch_size=2,
-                                            shuffle=True, num_workers=2)
+                                            shuffle=True)
     
     
     def print_example():
@@ -66,6 +67,7 @@ def main():
     # Define loss function and optimizer
     criterion_cls = nn.CrossEntropyLoss()
     criterion_bbox = nn.SmoothL1Loss()
+    multi_task_loss_crit =  MultiTaskLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
     
@@ -73,7 +75,7 @@ def main():
     # Training loop
     num_epochs = 10  # Specify the number of epochs
     for epoch in range(num_epochs):
-        print("Starting Epoch: ", epoch)
+        print("Starting Epoch: ", epoch + 1)
         
         model.train()  # Set the model to training mode
         running_loss = 0.0
@@ -87,15 +89,27 @@ def main():
             target_labels = target_labels.to(device)
             target_bbox = target_bbox.to(device)
 
+
             # Forward pass
             print("Forward pass")
             cls_scores, bbox_preds = model(images, rois)
             
+            print(cls_scores.shape)
+            print(target_labels.shape)
+
+
             # Compute the loss
             print("Compute Loss")
-            loss_cls = criterion_cls(cls_scores, target_labels)
-            loss_bbox = criterion_bbox(bbox_preds, target_bbox)
-            loss = loss_cls + loss_bbox
+            
+            loss = multi_task_loss_crit(cls_scores, bbox_preds, )
+            # # Compute the classification loss
+            # loss_cls = criterion_cls(cls_scores_flattened, target_labels_flattened)
+
+            # # Compute the regression loss
+            # loss_bbox = criterion_bbox(bbox_preds, target_bbox)
+
+            # # Total loss
+            # loss = loss_cls + loss_bbox
 
             # Backward pass and optimization
             print("Backprop")
