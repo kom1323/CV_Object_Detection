@@ -20,13 +20,18 @@ class RoIPooling(nn.Module):
     def forward(self, features, rois):
         pooled_features = []
         for roi in rois:
-            # Convert RoIs from image coordinates to feature map coordinates
-            x1_fm = int(roi[0] / self.scale_factor)
-            y1_fm = int(roi[1] / self.scale_factor)
-            x2_fm = int(roi[2] / self.scale_factor)
-            y2_fm = int(roi[3] / self.scale_factor)
-            # Perform RoI pooling for each region
-            pooled_features.append(self.roi_pool(features[:, :, x1_fm:x2_fm, y1_fm:y2_fm]))
+            # Iterate over each bounding box in the batch
+            print(features.shape)
+            for box in roi:
+                # Convert RoI from image coordinates to feature map coordinates
+                x1_fm = int(box[0] / self.scale_factor)
+                y1_fm = int(box[1] / self.scale_factor)
+                x2_fm = int(box[2] / self.scale_factor)
+                y2_fm = int(box[3] / self.scale_factor)
+
+                
+                # Perform RoI pooling for each region
+                pooled_features.append(self.roi_pool(features[:, :, x1_fm:x2_fm, y1_fm:y2_fm]))
         return torch.cat(pooled_features, dim=0)
 
 
@@ -54,10 +59,9 @@ class FastRCNNResNet(nn.Module):
     def __init__(self, num_classes):
         super(FastRCNNResNet, self).__init__()
         resnet18 = models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-        resnet18 = nn.Sequential(*list(resnet18.children())[:-2])
-
+        resnet18 = nn.Sequential(*list(resnet18.children())[:-4])
         self.backbone = resnet18
-        self.fast_rcnn = FastRCNN(num_classes + 1)
+        self.fast_rcnn = FastRCNN(num_classes + 1)  # +1 for background
 
     def forward(self, images, rois):
         features = self.backbone(images)

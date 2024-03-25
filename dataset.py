@@ -1,4 +1,5 @@
 import os
+import shutil
 import pandas as pd
 from PIL import Image
 import torch
@@ -16,6 +17,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 import selectivesearch
+from torchvision.ops import box_iou
 
 
 
@@ -68,6 +70,7 @@ class CombinedDataset(Dataset):
 
 
 
+
     def __len__(self):
         return len(self.img_data_all)
 
@@ -78,7 +81,7 @@ class CombinedDataset(Dataset):
         # Convert image to skimage format
         image_np = image.permute(1, 2, 0).cpu().numpy() 
         # Perform selective search
-        _, regions = selectivesearch.selective_search(image_np, scale=300, sigma=0.8, min_size=700)
+        _, regions = selectivesearch.selective_search(image_np, scale=300, sigma=0.8, min_size=10)
 
         
         # Convert regions to RoI format
@@ -95,8 +98,8 @@ class CombinedDataset(Dataset):
     def __getitem__(self, idx):
         image_path = self.img_data_all[idx]
         image = Image.open(image_path)
-        labels = torch.tensor(self.gt_classes_all[idx])
-        boxes = torch.tensor(self.gt_boxes_all[idx])
+        labels = self.gt_classes_all[idx].clone().detach()
+        boxes = self.gt_boxes_all[idx].clone().detach()
         scale_factor_width = 224 / image.width
         scale_factor_height = 224 / image.height
         
@@ -111,7 +114,33 @@ class CombinedDataset(Dataset):
             box[3] = int(box[3] * scale_factor_height)  # Adjust y2
           
         rois = torch.tensor(self.selective_search(image))
+        
 
-        return (image, rois), (labels, boxes) 
+            # Convert boxes to torchvision format [x1, y1, x2, y2]
+        torchvision_boxes = torch.stack([
+            boxes[:, 0], boxes[:, 1], boxes[:, 2] + boxes[:, 0], boxes[:, 3] + boxes[:, 1]
+        ], dim=1)
+        
+        # Calculate IoU between each ROI and each ground truth box
+        iou_matrix = box_iou(rois, torchvision_boxes)
+        
+                # Select the top 64 ROIs based on IoU with ground truth boxes
+        top_indices = torch.argsort(iou_matrix, descending=True, dim=0)
+        selected_rois = []
+        selected_indices = set()
+        for index in top_indices:
+            for idx in index:
+                if idx.item() not in selected_indices:
+                    selected_indices.add(idx.item())
+                    selected_rois.append(rois[idx])
+                    if len(selected_rois) == 8:
+                        break
+            if len(selected_rois) == 8:
+                break
+        selected_rois = torch.stack(selected_rois)
+
+        
+        return (image, selected_rois), (labels, boxes)
+  
+
     
-

@@ -6,6 +6,6 @@ version = project.version(2)
 dataset = version.download("tensorflow")
 
 
-project = rf.workspace("zerocomputervision").project("chip-detection-and-counting-v2")
-version = project.version(1)
+project = rf.workspace("pocketsight-r1e4c").project("degen101-original-stack-size-rn0ra")
+version = project.version(12)
 dataset = version.download("tensorflow")

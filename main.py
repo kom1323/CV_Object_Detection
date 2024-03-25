@@ -11,22 +11,45 @@ import dataset
 import miscs
 import model as m
 
+import warnings
+
+# Suppress the UserWarning from skimage
+warnings.filterwarnings("ignore", message="Applying `local_binary_pattern` to floating-point images may give unexpected results when small numerical differences between adjacent pixels are present.")
+
+
 # Create transform function
 transforms_train = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor()
 ])
 
+
+
 def main():
 
-    root_dirs = ['poker-cards-2', 'chip-detection-and-counting-v2-1']
+
+    root_dirs = ['poker-cards-2', 'poker-chips']
+    
+    print("Creating Dataset...")
     trainset = dataset.CombinedDataset(root_dirs=root_dirs, transform=transforms_train)
 
 
-    # dataloaders
+    # dataloaders|
     dataloader = torch.utils.data.DataLoader(trainset, batch_size=2,
                                             shuffle=True, num_workers=2)
+    
+    
+    def print_example():
+        (img,rois),(labels,boxes) = trainset[1]
 
+
+        miscs.show_image_with_boxes(img,labels=labels,boxes=boxes)
+        miscs.show_image_with_boxes(img,boxes=rois)
+
+    
+    
+    
+    #print_example()
     # constant for classes
     classes = ('Card','Chip')
 
@@ -45,6 +68,7 @@ def main():
     criterion_bbox = nn.SmoothL1Loss()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
+    
 
     # Training loop
     num_epochs = 10  # Specify the number of epochs
@@ -54,19 +78,23 @@ def main():
         model.train()  # Set the model to training mode
         running_loss = 0.0
         
-        for images, targets in dataloader:  # Iterate over batches of data
-
+        for inputs, targets in dataloader:  # Iterate over batches of data
+       
+            images, rois = inputs[0], inputs[1]
             images = images.to(device)
-            targets = [target.to(device) for target in targets]
+            rois = rois.to(device)
+            target_labels, target_bbox = targets[0], targets[1]
+            target_labels = target_labels.to(device)
+            target_bbox = target_bbox.to(device)
 
             # Forward pass
             print("Forward pass")
-            cls_scores, bbox_preds = model(images)
+            cls_scores, bbox_preds = model(images, rois)
             
             # Compute the loss
             print("Compute Loss")
-            loss_cls = criterion_cls(cls_scores, targets[0])
-            loss_bbox = criterion_bbox(bbox_preds, targets[1])
+            loss_cls = criterion_cls(cls_scores, target_labels)
+            loss_bbox = criterion_bbox(bbox_preds, target_bbox)
             loss = loss_cls + loss_bbox
 
             # Backward pass and optimization
@@ -85,12 +113,7 @@ def main():
 
 
 
-    def print_example():
-        (img,rois),(labels,boxes) = trainset[1]
-
-
-        miscs.show_image_with_boxes(img,labels=labels,boxes=boxes)
-        miscs.show_image_with_boxes(img,boxes=rois)
+    
     
 
 if __name__ == "__main__":
