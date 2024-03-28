@@ -14,7 +14,6 @@ class MultiTaskLoss(nn.Module):
 
     def forward(self, scores, preds, targets):
         """
-        计算多任务损失。N表示RoI数目
         :param scores: [N, C]
         :param preds: [N, 4]x,y,w,h
         :param targets: [N]

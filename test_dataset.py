@@ -19,6 +19,8 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn
 import selectivesearch
 from torchvision.ops import box_iou
 from random import shuffle
+import torch.nn.functional as F
+
 
 
 
@@ -64,7 +66,8 @@ class CombinedDataset(Dataset):
                                 self.gt_classes_all.append(data['classes'])
                                 self.gt_boxes_all.append(data['boxes'])
 
-    
+       
+        
 
 
 
@@ -94,6 +97,21 @@ class CombinedDataset(Dataset):
             box[2] = int(box[2] * scale_factor_width)  # Adjust x2
             box[3] = int(box[3] * scale_factor_height)  # Adjust y2
 
+        
+
+        # # Convert lists of tensors to a single tensor with padding
+        # # Padding for labels
+        # max_length_labels = 20
+        # padded_labels = F.pad(labels, (0, max_length_labels - labels.size(0)), value=2)
+
+        # # Pad boxes to have 20 elements, each of size 4
+        # max_length_boxes = 20
+        # num_boxes_to_pad = max_length_boxes - boxes.size(0)
+        # padded_boxes = F.pad(boxes, (0, 0, 0, num_boxes_to_pad), value=0)
+            
+        boxes = boxes[:2]
+        labels = labels[:2]
+
         # Prepare targets
         targets = {
             'boxes': boxes,
@@ -103,8 +121,12 @@ class CombinedDataset(Dataset):
 
 
 
+        # print("boxes = ", padded_boxes.shape)
+        # print("labels", padded_labels.shape)
+
+
         # Return image tensor and targets
-        return image, [targets]
+        return image, targets
   
 
     

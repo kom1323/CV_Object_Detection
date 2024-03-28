@@ -36,12 +36,12 @@ def main():
 
 
     # dataloaders|
-    dataloader = torch.utils.data.DataLoader(trainset, batch_size=2,
+    dataloader = torch.utils.data.DataLoader(trainset, batch_size=1,
                                             shuffle=True)
     
     
     def print_example():
-        (img,rois),(labels,boxes) = trainset[1]
+        (img,rois, foreground_indices),(labels,boxes) = trainset[1]
 
 
         miscs.show_image_with_boxes(img,labels=labels,boxes=boxes)
@@ -50,7 +50,7 @@ def main():
     
     
     
-    #print_example()
+    print_example()
     # constant for classes
     classes = ('Card','Chip')
 
@@ -82,9 +82,10 @@ def main():
         
         for inputs, targets in dataloader:  # Iterate over batches of data
        
-            images, rois = inputs[0], inputs[1]
+            images, rois, foreground_indices = inputs[0], inputs[1], inputs[2]
             images = images.to(device)
             rois = rois.to(device)
+            foreground_indices = foreground_indices.to(device)
             target_labels, target_bbox = targets[0], targets[1]
             target_labels = target_labels.to(device)
             target_bbox = target_bbox.to(device)
@@ -96,20 +97,22 @@ def main():
             
             print(cls_scores.shape)
             print(target_labels.shape)
+            print(bbox_preds.shape)
+            print(target_bbox.shape)
 
 
             # Compute the loss
             print("Compute Loss")
             
-            loss = multi_task_loss_crit(cls_scores, bbox_preds, )
-            # # Compute the classification loss
-            # loss_cls = criterion_cls(cls_scores_flattened, target_labels_flattened)
+           
+            # Compute the classification loss
+            loss_cls = criterion_cls(cls_scores, target_labels)
 
-            # # Compute the regression loss
-            # loss_bbox = criterion_bbox(bbox_preds, target_bbox)
+            # Compute the regression loss
+            loss_bbox = criterion_bbox(bbox_preds, target_bbox)
 
-            # # Total loss
-            # loss = loss_cls + loss_bbox
+            # Total loss
+            loss = loss_cls + loss_bbox
 
             # Backward pass and optimization
             print("Backprop")

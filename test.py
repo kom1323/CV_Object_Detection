@@ -6,15 +6,42 @@ from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
 from test_dataset import CombinedDataset
 import torchvision.transforms as transforms
 from torchvision.models.resnet import ResNet18_Weights
+import sys
 
+def collate_fn(batch):
+    # Separate images and targets from the batch
+    images, targets = zip(*batch)
+    images = torch.stack(images, dim=0)
+    return images, list(targets)
+
+def move_to(obj, device):
+  if torch.is_tensor(obj):
+    return obj.to(device)
+  elif isinstance(obj, dict):
+    res = {}
+    for k, v in obj.items():
+      res[k] = move_to(v, device)
+    return res
+  elif isinstance(obj, list):
+    res = []
+    for v in obj:
+      res.append(move_to(v, device))
+    return res
+  else:
+    raise TypeError("Invalid type for move_to")
 
 def get_model(num_classes):
     # Load pre-trained ResNet-18 model
     backbone = resnet_fpn_backbone('resnet18', weights=ResNet18_Weights.DEFAULT)
+    backbone.out_channels = 256
+    print(backbone)
+
+    for p in backbone.parameters():
+            p.requires_grad = False
 
     # Define anchor sizes and aspect ratios for the Region Proposal Network (RPN)
-    anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
-                                       aspect_ratios=((0.5, 1.0, 2.0),))
+    anchor_generator = AnchorGenerator(sizes=(32, 64, 128, 256, 512),
+                                       aspect_ratios=(0.5, 1.0, 2.0))
 
     # Define the region of interest (RoI) pooling method
     roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
@@ -44,41 +71,51 @@ if __name__ == "__main__":
     trainset = CombinedDataset(root_dirs=root_dirs, transform=transforms_train)
 
 
-    # dataloaders|
-    dataloader = torch.utils.data.DataLoader(trainset, batch_size=1,
-                                            shuffle=True)
+    # dataloader-s|
+    dataloader = torch.utils.data.DataLoader(trainset, batch_size=4,
+                                            shuffle=True,
+                                            collate_fn=collate_fn)
 
+    # yes = next(iter(dataloader))
+    # print("heeyyy", len(yes[1]))
+    # sys.exit()
 
-
-
+    
     # Example usage:
     # Define the number of classes (including background)
     num_classes = 3  # For example, if you have 1 class + background
     model = get_model(num_classes)
 
+    print(f" is cuda available: {torch.cuda.is_available()}")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+
     # Print the model architecture
     #print(model)
 
-# Define optimizer and loss function
-optimizer = torch.optim.SGD(model.parameters(), lr=0.005)
-criterion = torch.nn.CrossEntropyLoss()
+    # Define optimizer and loss function
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.005)
+    criterion = torch.nn.CrossEntropyLoss()
 
-# Training loop
-for epoch in range(10):
-    print("Starting Epoch #", epoch)
-    model.train()
-    running_loss = 0.0
-    for images, targets in dataloader:
-        images = [image.float() for image in images]  # Convert images to float
-        targets = [{k: v.float() for k, v in target.items()} for target in targets]  # Convert targets to float
-        
-        optimizer.zero_grad()
-        loss_dict = model(images, targets)
-        losses = sum(loss for loss in loss_dict.values())
-        losses.backward()
-        optimizer.step()
-        
-        running_loss += losses.item()
-    print(f"Epoch {epoch+1}, Loss: {running_loss / len(dataloader)}")
+    model.to(device)
+    # Training loop
+    for epoch in range(10):
+        print("Starting Epoch #", epoch)
+        model.train()
+        running_loss = 0.0
+        for i, (images, targets) in enumerate(dataloader):
+            print(f"Processing batch {i+1}")
+            images = move_to(images, device)
+            targets = move_to(targets, device)
+                
+            optimizer.zero_grad()
+            loss_dict = model(images, targets)
+            losses = sum(loss for loss in loss_dict.values())
+            losses.backward()
+            optimizer.step()
+            
+            running_loss += losses.item()
+        print(f"Epoch {epoch+1}, Loss: {running_loss / len(dataloader)}")
 
 

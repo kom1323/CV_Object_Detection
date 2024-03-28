@@ -18,6 +18,7 @@ import torchvision.transforms as transforms
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 import selectivesearch
 from torchvision.ops import box_iou
+from random import shuffle
 
 
 
@@ -81,7 +82,7 @@ class CombinedDataset(Dataset):
         # Convert image to skimage format
         image_np = image.permute(1, 2, 0).cpu().numpy() 
         # Perform selective search
-        _, regions = selectivesearch.selective_search(image_np, scale=500, sigma=0.8, min_size=100)
+        _, regions = selectivesearch.selective_search(image_np, scale=600, sigma=0.8, min_size=50)
 
         
         # Convert regions to RoI format
@@ -139,34 +140,35 @@ class CombinedDataset(Dataset):
                 break
         selected_rois = torch.stack(selected_rois)
 
-        # # Sample 25% RoIs from object proposals with IoU >= 0.5
-        # foreground_indices = torch.nonzero(iou_matrix >= 0.5)
-        # foreground_indices = foreground_indices[torch.randperm(len(foreground_indices))[:int(len(foreground_indices) * 0.25)]]
+        # selected_rois = []
+        # selected_labels = []
 
-        # # Sample remaining RoIs from object proposals with IoU in [0.1, 0.5)
-        # background_indices = torch.nonzero((iou_matrix >= 0.1) & (iou_matrix < 0.5))
-        # background_indices = background_indices[torch.randperm(len(background_indices))[:64 - len(foreground_indices)]]
+        # num_foreground_rois = 0
+        # num_background_rois = 0
 
-        # # Combine foreground and background indices
-        # selected_indices = torch.cat((foreground_indices, background_indices), dim=0)
+        # # Select foreground ROIs with IoU >= 0.5
+        # for i in range(len(rois)):
+        #     max_iou = torch.max(iou_matrix[i])
+        #     if max_iou >= 0.5:
+        #         selected_rois.append(rois[i])
+        #         selected_labels.append(i)  # Save index of the foreground ROI
+        #         num_foreground_rois += 1
 
-        # # Shuffle the selected indices
-        # selected_indices = selected_indices[torch.randperm(len(selected_indices))]
+        # # Select background ROIs with IoU in [0.1, 0.5)
+        # for i in range(len(rois)):
+        #     max_iou = torch.max(iou_matrix[i])
+        #     if max_iou >= 0.1 and max_iou < 0.5 and num_background_rois < (len(rois) - num_foreground_rois):
+        #         num_background_rois += 1
 
-        # # Select corresponding RoIs based on selected indices
-        # selected_rois = rois[selected_indices.squeeze()]
+        # # Shuffle selected indices of foreground ROIs
+        # shuffle(selected_rois)
 
-        # # Ensure that we have 64 RoIs
-        # if len(selected_rois) < 64:
-        #     # If there are fewer than 64 RoIs, randomly select additional RoIs from the top-ranked RoIs
-        #     remaining_indices = torch.nonzero(~iou_matrix.any(dim=1))
-        #     remaining_indices = remaining_indices[torch.randperm(len(remaining_indices))[:64 - len(selected_rois)]]
-        #     remaining_rois = rois[remaining_indices.squeeze()]
-        #     remaining_rois = remaining_rois.unsqueeze(0)  # Unsqueeze to match dimensions
-        #     selected_rois = torch.cat((selected_rois, remaining_rois), dim=0)
+        # # Convert selected ROIs to tensor
+        # selected_rois = torch.stack(selected_rois)
 
-        # # Ensure that we have exactly 64 RoIs
-        # selected_rois = selected_rois[:64]
+        # # Convert selected indices to tensor
+        # foreground_rois_indices = torch.tensor(selected_labels)
+
 
         return (image, selected_rois), (labels, boxes)
   

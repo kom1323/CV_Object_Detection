@@ -37,6 +37,7 @@ class RoIPooling(nn.Module):
 
                 # Perform RoI pooling for each region
                 pooled_features.append(self.roi_pool(features[:, :, x1_fm:x2_fm, y1_fm:y2_fm]))
+
         return torch.cat(pooled_features, dim=0)
 
 
