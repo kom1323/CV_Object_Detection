@@ -124,8 +124,9 @@ if __name__ == "__main__":
             optimizer.step()
             
             running_loss += losses.item()
-            checkpoint_path = checkpoint_dir + f'model_epoch_{epoch+1}.pth'
-
+            
+        checkpoint_path = checkpoint_dir + f'model_epoch_{epoch+1}.pth'
+        torch.save(model.state_dict(), checkpoint_path)
         print(f"Epoch {epoch+1}, Loss: {running_loss / len(dataloader)}")
 
 
