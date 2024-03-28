@@ -7,6 +7,14 @@ from test_dataset import CombinedDataset
 import torchvision.transforms as transforms
 from torchvision.models.resnet import ResNet18_Weights
 import sys
+import os
+
+
+checkpoint_dir = 'model_checkpoint/'
+os.makedirs(checkpoint_dir, exist_ok=True)
+
+
+
 
 def collate_fn(batch):
     # Separate images and targets from the batch
@@ -72,10 +80,10 @@ if __name__ == "__main__":
 
 
     # dataloader-s|
-    dataloader = torch.utils.data.DataLoader(trainset, batch_size=4,
+    dataloader = torch.utils.data.DataLoader(trainset, batch_size=8,
                                             shuffle=True,
                                             collate_fn=collate_fn)
-
+    num_batches = len(dataloader)
     # yes = next(iter(dataloader))
     # print("heeyyy", len(yes[1]))
     # sys.exit()
@@ -105,7 +113,7 @@ if __name__ == "__main__":
         model.train()
         running_loss = 0.0
         for i, (images, targets) in enumerate(dataloader):
-            print(f"Processing batch {i+1}")
+            print(f"Processing batch {i+1} out of {num_classes}")
             images = move_to(images, device)
             targets = move_to(targets, device)
                 
@@ -116,6 +124,8 @@ if __name__ == "__main__":
             optimizer.step()
             
             running_loss += losses.item()
+            checkpoint_path = checkpoint_dir + f'model_epoch_{epoch+1}.pth'
+
         print(f"Epoch {epoch+1}, Loss: {running_loss / len(dataloader)}")
 
 
