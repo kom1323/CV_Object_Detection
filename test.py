@@ -8,6 +8,10 @@ import torchvision.transforms as transforms
 from torchvision.models.resnet import ResNet18_Weights
 import sys
 import os
+from torch.utils.tensorboard import SummaryWriter
+
+# Set up TensorBoard writer
+writer = SummaryWriter()
 
 
 checkpoint_dir = 'model_checkpoint/'
@@ -42,7 +46,6 @@ def get_model(num_classes):
     # Load pre-trained ResNet-18 model
     backbone = resnet_fpn_backbone('resnet18', weights=ResNet18_Weights.DEFAULT)
     backbone.out_channels = 256
-    print(backbone)
 
     for p in backbone.parameters():
             p.requires_grad = False
@@ -84,19 +87,23 @@ if __name__ == "__main__":
                                             shuffle=True,
                                             collate_fn=collate_fn)
     num_batches = len(dataloader)
+    
     # yes = next(iter(dataloader))
     # print("heeyyy", len(yes[1]))
     # sys.exit()
 
     
-    # Example usage:
-    # Define the number of classes (including background)
-    num_classes = 3  # For example, if you have 1 class + background
-    model = get_model(num_classes)
+
 
     print(f" is cuda available: {torch.cuda.is_available()}")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
+
+
+    # Define the number of classes (including background)
+    num_classes = 3  # For example, if you have 1 class + background
+    model = get_model(num_classes)
+    model.to(device)
 
 
     # Print the model architecture
@@ -106,14 +113,14 @@ if __name__ == "__main__":
     optimizer = torch.optim.SGD(model.parameters(), lr=0.005)
     criterion = torch.nn.CrossEntropyLoss()
 
-    model.to(device)
+
     # Training loop
     for epoch in range(10):
         print("Starting Epoch #", epoch)
         model.train()
         running_loss = 0.0
         for i, (images, targets) in enumerate(dataloader):
-            print(f"Processing batch {i+1} out of {num_classes}")
+            print(f"Processing batch {i+1} out of {num_batches}")
             images = move_to(images, device)
             targets = move_to(targets, device)
                 
@@ -124,9 +131,17 @@ if __name__ == "__main__":
             optimizer.step()
             
             running_loss += losses.item()
-            
+
+            if i % 10 == 9:
+                # Add loss to TensorBoard
+                writer.add_scalar("Loss/train", running_loss, epoch)
+                running_loss = 0.0
+
         checkpoint_path = checkpoint_dir + f'model_epoch_{epoch+1}.pth'
         torch.save(model.state_dict(), checkpoint_path)
         print(f"Epoch {epoch+1}, Loss: {running_loss / len(dataloader)}")
 
 
+# Close TensorBoard writer
+writer.flush()
+writer.close()
