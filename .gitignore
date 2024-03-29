@@ -6,3 +6,4 @@ poker-cards-2/
 runs/
 poker-chips/
 model_checkpoint/
+logs/
