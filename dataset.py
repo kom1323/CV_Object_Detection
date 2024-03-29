@@ -58,7 +58,7 @@ class CombinedDataset(Dataset):
                                 xmax = int(row['xmax'])
                                 ymax = int(row['ymax'])
                                 filename_data[filename]['boxes'].append([xmin, ymin, xmax, ymax])
-                                filename_data[filename]['classes'].append(label)
+                                filename_data[filename]['classes'].append(label + 1)
                             # Append data for each unique filename
                             for filename, data in filename_data.items():
                                 self.img_data_all.append(filename)

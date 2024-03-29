@@ -17,7 +17,7 @@ from torchvision.utils import draw_bounding_boxes
 import cv2
 
 
-random_seed = 105
+random_seed = 24
 checkpoint_dir = 'model_checkpoint/'
 os.makedirs(checkpoint_dir, exist_ok=True)
 writer = SummaryWriter('logs')
@@ -72,7 +72,6 @@ def get_model(num_classes):
 
 
 
-
 def evaluate_loss(model, data_loader, device, iteration):
     val_loss = 0
     with torch.no_grad():
@@ -80,15 +79,16 @@ def evaluate_loss(model, data_loader, device, iteration):
           images = move_to(images, device)
           targets = move_to(targets, device)
           losses, detections = eval_forward(model, images, targets)
+          
+          #only loop once and display images in tensorboard
           if val_loss == 0:
             processed_images = []
             for i in range(4):
               img_display = images[i]
               img_display = (img_display * 255).to(torch.uint8)
               output = detections[i]
-
               print(output['labels'])
-              mapping = {0: "Card", 1: "Chip", 2: "Background"}
+              mapping = {0: "Background", 1: "Card", 2: "Chip"}
               replaced_list = [mapping[value.item()] if value.item() in mapping else str(value) for value in output['labels']]
               img_display = draw_bounding_boxes(img_display, output['boxes'], replaced_list)  
               processed_images.append(img_display)          
@@ -96,6 +96,7 @@ def evaluate_loss(model, data_loader, device, iteration):
             img_grid = torchvision.utils.make_grid(processed_images)  # Creating grid of images
             writer.add_image(f'images', img_grid, global_step=iteration)  
             break 
+
           val_loss += losses['loss_classifier']
 
     validation_loss = val_loss / len(data_loader)
@@ -113,7 +114,6 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
     root_dirs = ['poker-cards-2', 'chip-detection-and-counting-v2-1']
-
     print("Creating Dataset...")
     dataset = CombinedDataset(root_dirs=root_dirs, transform=transforms_train)
 
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     split = int(validation_split * dataset_size)
 
     # Shuffle the indices if needed
-    np.random.seed(random_seed)
+    #np.random.seed(random_seed)
     np.random.shuffle(indices)
 
     # Split the dataset into train and validation sets
