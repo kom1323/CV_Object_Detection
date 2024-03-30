@@ -1,9 +1,69 @@
+import torch
+import torchvision
 from typing import Tuple, List, Dict, Optional
 import torch
 from torch import Tensor
 from collections import OrderedDict
 from torchvision.models.detection.roi_heads import fastrcnn_loss
 from torchvision.models.detection.rpn import concat_box_prediction_layers
+from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection.rpn import AnchorGenerator
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
+import torchvision.transforms as transforms
+from torchvision.models.resnet import ResNet18_Weights
+
+def collate_fn(batch):
+    # Separate images and targets from the batch
+    images, targets = zip(*batch)
+    images = torch.stack(images, dim=0)
+    return images, list(targets)
+
+def move_to(obj, device):
+  if torch.is_tensor(obj):
+    return obj.to(device)
+  elif isinstance(obj, dict):
+    res = {}
+    for k, v in obj.items():
+      res[k] = move_to(v, device)
+    return res
+  elif isinstance(obj, list):
+    res = []
+    for v in obj:
+      res.append(move_to(v, device))
+    return res
+  else:
+    raise TypeError("Invalid type for move_to")
+
+def get_model(num_classes):
+    # Load pre-trained ResNet-18 model
+    backbone = resnet_fpn_backbone('resnet18', weights=ResNet18_Weights.DEFAULT)
+    backbone.out_channels = 256
+
+    for p in backbone.parameters():
+            p.requires_grad = False
+
+    # Define anchor sizes and aspect ratios for the Region Proposal Network (RPN)
+    anchor_generator = AnchorGenerator(sizes=(32, 64, 128, 256, 512),
+                                       aspect_ratios=(0.5, 1.0, 2.0))
+
+    # Define the region of interest (RoI) pooling method
+    roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
+                                                     output_size=7,
+                                                     sampling_ratio=2)
+
+    # Create Faster R-CNN model with ResNet-18 backbone
+    model = FasterRCNN(backbone=backbone,
+                       num_classes=num_classes,
+                       rpn_anchor_generator=anchor_generator,
+                       box_roi_pool=roi_pooler,
+                       box_detections_per_img=20,
+                       box_score_thresh=0.8
+                        )
+
+    return model
+
+
+
 def eval_forward(model, images, targets):
     
     """

@@ -10,65 +10,23 @@ import sys
 import os
 import time
 import numpy as np
-from misc import eval_forward
+from misc import eval_forward, get_model, collate_fn, move_to
 from dataset import CombinedDataset
 from torch.utils.data.sampler import SubsetRandomSampler, SequentialSampler
 from torchvision.utils import draw_bounding_boxes
 import cv2
+import model_applier
+import sys
+
+
 
 
 random_seed = 24
 checkpoint_dir = 'model_checkpoint/'
 os.makedirs(checkpoint_dir, exist_ok=True)
 writer = SummaryWriter('logs')
+TESTING = 1
 
-def collate_fn(batch):
-    # Separate images and targets from the batch
-    images, targets = zip(*batch)
-    images = torch.stack(images, dim=0)
-    return images, list(targets)
-
-def move_to(obj, device):
-  if torch.is_tensor(obj):
-    return obj.to(device)
-  elif isinstance(obj, dict):
-    res = {}
-    for k, v in obj.items():
-      res[k] = move_to(v, device)
-    return res
-  elif isinstance(obj, list):
-    res = []
-    for v in obj:
-      res.append(move_to(v, device))
-    return res
-  else:
-    raise TypeError("Invalid type for move_to")
-
-def get_model(num_classes):
-    # Load pre-trained ResNet-18 model
-    backbone = resnet_fpn_backbone('resnet18', weights=ResNet18_Weights.DEFAULT)
-    backbone.out_channels = 256
-
-    for p in backbone.parameters():
-            p.requires_grad = False
-
-    # Define anchor sizes and aspect ratios for the Region Proposal Network (RPN)
-    anchor_generator = AnchorGenerator(sizes=(32, 64, 128, 256, 512),
-                                       aspect_ratios=(0.5, 1.0, 2.0))
-
-    # Define the region of interest (RoI) pooling method
-    roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
-                                                     output_size=7,
-                                                     sampling_ratio=2)
-
-    # Create Faster R-CNN model with ResNet-18 backbone
-    model = FasterRCNN(backbone=backbone,
-                       num_classes=num_classes,
-                       rpn_anchor_generator=anchor_generator,
-                       box_roi_pool=roi_pooler,
-                      box_detections_per_img=20)
-
-    return model
 
 
 
@@ -107,9 +65,28 @@ def evaluate_loss(model, data_loader, device, iteration):
 
 
 if __name__ == "__main__":
+    
+
+    if TESTING:
+      num_classes = 3  
+      model = get_model(num_classes)
+
+      print(f" is cuda available: {torch.cuda.is_available()}")
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      print(device)
+      model.to(device)
+      model_applier.activate_model(model, device)
+      sys.exit()
+       
+       
 
 # Define transformation to apply to the images
     transforms_train = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor()
+    ])
+
+    transforms_augmentations =  transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor()
     ])
@@ -126,7 +103,7 @@ if __name__ == "__main__":
     split = int(validation_split * dataset_size)
 
     # Shuffle the indices if needed
-    #np.random.seed(random_seed)
+    np.random.seed(random_seed)
     np.random.shuffle(indices)
 
     # Split the dataset into train and validation sets
