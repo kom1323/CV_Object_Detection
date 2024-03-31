@@ -11,6 +11,12 @@ from torchvision.models.detection.rpn import AnchorGenerator
 from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
 import torchvision.transforms as transforms
 from torchvision.models.resnet import ResNet18_Weights
+import albumentations as A
+from albumentations.pytorch.transforms import ToTensorV2
+
+
+
+
 
 def collate_fn(batch):
     # Separate images and targets from the batch
@@ -36,15 +42,16 @@ def move_to(obj, device):
 
 def get_model(num_classes):
     # Load pre-trained ResNet-18 model
-    backbone = resnet_fpn_backbone('resnet18', weights=ResNet18_Weights.DEFAULT)
+    backbone = resnet_fpn_backbone(backbone_name='resnet18', weights=ResNet18_Weights.DEFAULT)
     backbone.out_channels = 256
 
-    for p in backbone.parameters():
-            p.requires_grad = False
 
-    # Define anchor sizes and aspect ratios for the Region Proposal Network (RPN)
-    anchor_generator = AnchorGenerator(sizes=(32, 64, 128, 256, 512),
-                                       aspect_ratios=(0.5, 1.0, 2.0))
+    for p in backbone.parameters():
+        p.requires_grad = False
+
+    # # Define anchor sizes and aspect ratios for the Region Proposal Network (RPN)
+    # anchor_generator = AnchorGenerator(sizes=((32, 64, 128, 256, 512),),
+    #                                    aspect_ratios=((0.5, 1.0, 2.0),))
 
     # Define the region of interest (RoI) pooling method
     roi_pooler = torchvision.ops.MultiScaleRoIAlign(featmap_names=['0'],
@@ -54,7 +61,6 @@ def get_model(num_classes):
     # Create Faster R-CNN model with ResNet-18 backbone
     model = FasterRCNN(backbone=backbone,
                        num_classes=num_classes,
-                       rpn_anchor_generator=anchor_generator,
                        box_roi_pool=roi_pooler,
                        box_detections_per_img=20,
                        box_score_thresh=0.8

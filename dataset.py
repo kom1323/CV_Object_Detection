@@ -73,8 +73,8 @@ class CombinedDataset(Dataset):
         image = Image.open(image_path).convert("RGB")
         labels = torch.tensor(self.gt_classes_all[idx], dtype=torch.int64)
         boxes = torch.tensor(self.gt_boxes_all[idx], dtype=torch.float32)
-        scale_factor_width = 224 / image.width
-        scale_factor_height = 224 / image.height
+        scale_factor_width = 500 / image.width
+        scale_factor_height = 500 / image.height
 
         if self.transform:
              # Apply transformations to the image
@@ -86,12 +86,16 @@ class CombinedDataset(Dataset):
             box[2] = int(box[2] * scale_factor_width)  # Adjust x2
             box[3] = int(box[3] * scale_factor_height)  # Adjust y2
 
+        
         # Prepare targets
         targets = {
             'boxes': boxes,
             'labels': labels
         }
 
+
+
+        
 
         # Return image tensor and targets
         return image, targets
